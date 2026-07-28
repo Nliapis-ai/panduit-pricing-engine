@@ -1,0 +1,2 @@
+class MsrpParser:
+    pass

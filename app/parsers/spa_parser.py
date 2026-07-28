@@ -1,0 +1,2 @@
+class SpaParser:
+    pass
