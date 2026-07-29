@@ -1,21 +1,52 @@
 from collections import defaultdict
+from app.engines.spa_engine import SpaEngine
 
 class SpaAggregationService:
+    def __init__(self):
+        self.engine = SpaEngine()
+
     def aggregate(self, rows:list[tuple[str,float]]):
         grouped = defaultdict(list)
         for part_number, price in rows:
             grouped[str(part_number)].append(float(price))
-        result = {}
-        for part_number, prices in grouped.items():
-            prices = sorted(prices)
-            result[part_number] = prices[0] if len(prices)==1 else prices[-1] if len(prices)==2 else prices[-2]
-        return result
 
-    def apply_bl_aw_jack_rule(self, spa_lookup:dict[str,float]):
+        aggregated = {}
+        audit = []
+
+        for part_number, prices in grouped.items():
+            final_price = self.engine.resolve_price(prices)
+            aggregated[part_number] = final_price
+            audit.append({
+                'part_number': part_number,
+                'spa_count': len(prices),
+                'selected_price': final_price,
+            })
+
+        return aggregated, audit
+
+    def apply_bl_aw_jack_rule(self, spa_lookup:dict[str,float], descriptions:dict[str,str]):
         enriched = dict(spa_lookup)
+        audit = []
+
         for part_number, price in list(spa_lookup.items()):
-            if part_number.endswith('BL'):
-                aw_part = f'{part_number[:-2]}AW'
-                if aw_part in spa_lookup:
-                    enriched[part_number] = max(price, spa_lookup[aw_part])
-        return enriched
+            description = descriptions.get(part_number, '').upper()
+            if 'JACK' not in description:
+                continue
+            if not part_number.endswith('BL'):
+                continue
+
+            aw_part = f'{part_number[:-2]}AW'
+            if aw_part not in spa_lookup:
+                continue
+
+            selected = max(price, spa_lookup[aw_part])
+            enriched[part_number] = selected
+
+            audit.append({
+                'bl_part': part_number,
+                'aw_part': aw_part,
+                'selected_price': selected,
+                'rule': 'JACK_BL_AW'
+            })
+
+        return enriched, audit
