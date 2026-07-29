@@ -2,9 +2,9 @@ class PanduitSchema:
     SHEET='SAP PRICELIST'
     SAP_MATERIAL='Αρ.Εξαρτ.Κατασκευαστή'
     PART_NUMBER='Αριθμός Υλικού Προμηθ.'
-    DESCRIPTION='Περιγραφή Υλικού'
+    DESCRIPTION='Βασική Μον.Μέτρησης'
+    BASE_UNIT='Ομάδα Υλικών 1'
     CURRENT_PRICE='Αρχική τιμή'
-    BASE_UNIT='Βασική Μον.Μέτρησης'
 
 class MsrpSchema:
     SHEET='English'

@@ -4,6 +4,7 @@ from typing import Optional
 class ProductRecord(BaseModel):
     sap_material: str = ''
     part_number: str
+    manufacturer_material_number: Optional[str] = None
     description: str = ''
     base_unit: Optional[str] = None
     current_price: float = 0.0
