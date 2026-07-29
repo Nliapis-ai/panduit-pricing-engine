@@ -1,7 +1,11 @@
 import pandas as pd
+from app.models.schema import PanduitSchema
 
 class PanduitParser:
-    SHEET_NAME = 'SAP PRICELIST'
-
-    def parse(self, path: str) -> pd.DataFrame:
-        return pd.read_excel(path, sheet_name=self.SHEET_NAME)
+    def parse(self, path:str) -> pd.DataFrame:
+        df = pd.read_excel(path, sheet_name=PanduitSchema.SHEET)
+        required=[PanduitSchema.PART_NUMBER,PanduitSchema.DESCRIPTION]
+        missing=[c for c in required if c not in df.columns]
+        if missing:
+            raise ValueError(f'Missing Panduit columns: {missing}')
+        return df
