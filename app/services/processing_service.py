@@ -8,8 +8,16 @@ class ProcessingService:
         self.master_dataset = MasterDatasetService()
         self.pricing_service = PricingService()
 
-    def process(self, panduit_df, msrp_lookup, spa_lookup, parameters=None):
-        records = self.dataset_builder.build(panduit_df, None, None, parameters)
-        records = self.master_dataset.enrich_with_msrp(records, msrp_lookup)
-        records = self.master_dataset.enrich_with_spa(records, spa_lookup)
+    def process(self, panduit_df, msrp_lookup, spa_lookup, package_lookup=None, reel_lookup=None, eol_parts=None):
+        records = self.dataset_builder.build(panduit_df, None, None, None)
+
+        records = self.master_dataset.enrich(
+            records,
+            msrp_lookup=msrp_lookup,
+            spa_lookup=spa_lookup,
+            package_lookup=package_lookup,
+            reel_lookup=reel_lookup,
+            eol_parts=eol_parts,
+        )
+
         return self.pricing_service.apply(records)
