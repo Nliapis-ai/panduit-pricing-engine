@@ -1,8 +1,17 @@
+from app.models.schema import MsrpSchema
+
 class LookupBuilder:
     def build_msrp_lookup(self, df):
-        if 'Catalog Number' not in df.columns or 'Reference Price' not in df.columns:
-            return {}
-        return dict(zip(df['Catalog Number'].astype(str), df['Reference Price']))
+        return self.build_column_lookup(df, MsrpSchema.PART_NUMBER, MsrpSchema.PRICE)
+
+    def build_msrp_inner_lookup(self, df):
+        return self.build_column_lookup(df, MsrpSchema.PART_NUMBER, MsrpSchema.INNER_PACKAGE)
+
+    def build_msrp_reel_lookup(self, df):
+        return self.build_column_lookup(df, MsrpSchema.PART_NUMBER, MsrpSchema.METERS_PER_REEL)
+
+    def build_msrp_status_lookup(self, df):
+        return self.build_column_lookup(df, MsrpSchema.PART_NUMBER, MsrpSchema.STATUS)
 
     def build_column_lookup(self, df, part_column, value_column):
         if df is None or part_column not in df.columns or value_column not in df.columns:

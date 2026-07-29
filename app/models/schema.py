@@ -8,11 +8,13 @@ class PanduitSchema:
 
 class MsrpSchema:
     SHEET='English'
-    HEADER_ROW=6
+    HEADER_ROW=7
     PART_NUMBER='Catalog Number'
     PRICE='Reference Price'
-    INNER_PACKAGE='Inner(PKG)'
+    MSRP='MSRP'
+    INNER_PACKAGE='Inner (PKG) '
     METERS_PER_REEL='Meters/Reel'
+    STATUS='Status'
 
 class SpaSchema:
     SHEET='CONNECTIVITY'
