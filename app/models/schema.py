@@ -1,7 +1,7 @@
 class PanduitSchema:
     SHEET='SAP PRICELIST'
-    SAP_MATERIAL='Υλικό'
-    PART_NUMBER='Αρ.Εξαρτ.Κατασκευαστή'
+    SAP_MATERIAL='Αρ.Εξαρτ.Κατασκευαστή'
+    PART_NUMBER='Αριθμός Υλικού Προμηθ.'
     DESCRIPTION='Περιγραφή Υλικού'
     CURRENT_PRICE='Αρχική τιμή'
     BASE_UNIT='Βασική Μον.Μέτρησης'
