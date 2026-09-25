@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Τιμές Panduit</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--mute:#5d6678;--line:#dfe3ea;--accent:#1f4e78;--accent-ink:#fff;--ok:#1e7a46;--ok-bg:#e3f4ea;--warn:#8a5a00;--warn-bg:#fff4d6;--bad:#a4262c;--bad-bg:#fde7e9;--drop:#eef3f9}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1c2029;--ink:#e6e9ef;--mute:#9aa3b5;--line:#2d3340;--accent:#6ea8dc;--accent-ink:#0d1520;--ok:#6fd49b;--ok-bg:#15301f;--warn:#f0c060;--warn-bg:#342a12;--bad:#ff8c92;--bad-bg:#3a1a1d;--drop:#1f2733}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:24px;margin:0 0 4px}
+h2{font-size:17px;margin:0 0 12px}
+.sub{color:var(--mute);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;background:var(--drop);cursor:pointer;position:relative;min-height:112px}
+.drop.has{border-style:solid;border-color:var(--ok)}
+.drop.err{border-style:solid;border-color:var(--bad)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop b{display:block;font-size:14px}
+.drop .req{font-size:12px;color:var(--mute)}
+.drop .fn{font-size:13px;margin-top:8px;word-break:break-all}
+.drop .info{font-size:12px;color:var(--mute);margin-top:2px}
+button{font:inherit;border:0;border-radius:8px;padding:10px 18px;background:var(--accent);color:var(--accent-ink);font-weight:600;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.tile{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.tile .n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .l{font-size:12px;color:var(--mute)}
+.checks{list-style:none;padding:0;margin:0 0 14px}
+.checks li{padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:14px}
+.ok{background:var(--ok-bg);color:var(--ok)}.warn{background:var(--warn-bg);color:var(--warn)}.bad{background:var(--bad-bg);color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--card);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+details{margin-top:6px}
+summary{cursor:pointer;font-weight:600}
+.rules{font-size:14px}
+.rules li{margin-bottom:4px}
+.mute{color:var(--mute);font-size:13px}
+#busy{display:none;color:var(--mute)}
+code{font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Ενημέρωση τιμών Panduit</h1>
+  <p class="sub">RULES V3.1 · παράμετροι <span id="pver"></span> · Όλα τρέχουν μέσα στον browser. Κανένα αρχείο δεν φεύγει από τον υπολογιστή σου.</p>
+
+  <section class="card">
+    <h2>1. Αρχεία</h2>
+    <div class="files">
+      <label class="drop" id="d-sap"><input type="file" accept=".xlsx,.xlsm" data-k="sap"><b>Αρχείο SAP</b><span class="req">υποχρεωτικό · export από pricing</span><div class="fn"></div><div class="info"></div></label>
+      <label class="drop" id="d-spa"><input type="file" accept=".xlsx,.xlsm" data-k="spa"><b>SPA MONITORING</b><span class="req">υποχρεωτικό · φύλλο CONNECTIVITY</span><div class="fn"></div><div class="info"></div></label>
+      <label class="drop" id="d-cat"><input type="file" accept=".xlsx,.xlsm" data-k="cat"><b>Κατάλογος EUR MSRP</b><span class="req">υποχρεωτικό · English + Discount Structure</span><div class="fn"></div><div class="info"></div></label>
+      <label class="drop" id="d-par"><input type="file" accept=".xlsx,.xlsm" data-k="par"><b>ΠΑΡΑΜΕΤΡΟΙ</b><span class="req">προαιρετικό · αντικαθιστά τις ενσωματωμένες</span><div class="fn"></div><div class="info"></div></label>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="go" disabled>Υπολόγισε</button>
+      <span id="busy">Υπολογίζω…</span>
+    </div>
+  </section>
+
+  <section class="card" id="out" hidden>
+    <h2>2. Αποτέλεσμα</h2>
+    <div class="tiles" id="tiles"></div>
+    <ul class="checks" id="checks"></ul>
+    <div class="row" style="margin-bottom:16px">
+      <button id="dl-sap">Κατέβασε αρχείο SAP</button>
+      <button id="dl-ctl" class="ghost">Κατέβασε ΕΛΕΓΧΟΣ.xlsx</button>
+    </div>
+    <p class="mute">Το αρχείο SAP είναι το δικό σου, αλλαγμένο ΜΟΝΟ στις στήλες «Αρχική τιμή» και «Z.A1 Τιμ. %». Το ΕΛΕΓΧΟΣ.xlsx έχει αλλαγές, ΓΙΑ_ΕΛΕΓΧΟ, καλώδια, SPA, EXPIRED, EOL.</p>
+    <details id="rev-wrap"><summary>ΓΙΑ_ΕΛΕΓΧΟ <span id="rev-n"></span></summary><div class="tablewrap" style="max-height:420px;margin-top:10px"><table id="rev"></table></div></details>
+    <details><summary>Μεγαλύτερες μεταβολές καθαρού κόστους</summary><div class="tablewrap" style="max-height:420px;margin-top:10px"><table id="big"></table></div></details>
+  </section>
+
+  <section class="card">
+    <h2>Παράμετροι</h2>
+    <p class="mute" id="pinfo"></p>
+    <div class="row"><button class="ghost" id="dl-par">Κατέβασε ΠΑΡΑΜΕΤΡΟΙ.xlsx</button></div>
+    <p class="mute" style="margin-top:10px">Για να αλλάξεις κάτι (απάντηση ΤΕΜ/ΚΟΥΤΙ, νέο EOL, override, μήκη SPA, όρια δικλείδων): κατέβασε το αρχείο, διόρθωσέ το και ανέβασέ το στο κουτί ΠΑΡΑΜΕΤΡΟΙ.</p>
+  </section>
+
+  <section class="card rules">
+    <details><summary>Κανόνες (RULES V3.1)</summary>
+    <ol>
+      <li><b>EOL_ΕΠΙΒΕΒΑΙΩΜΕΝΑ</b> και <b>OVERRIDES</b> πρώτα.</li>
+      <li>SPA «NETKEY MID MARKET» → αυτή, πάνω από όλα.</li>
+      <li>ΑΚΡΟΔΕΚΤΗΣ / ΚΩΣ ΠΡΕΣΑΣ → MSRP, πάντα ανά τεμάχιο (εκτός αν η περιγραφή δηλώνει συσκευασία).</li>
+      <li>Patch cord (η περιγραφή αρχίζει με P CORD / P.CORD / PATCH CORD) με χρώμα → MSRP. ΛΕΥΚΟ, ΓΚΡΙ, ΜΩΒ και χωρίς χρώμα → SPA αν μήκος 0,5/1/2/3/5 m και υπάρχει SPA, αλλιώς MSRP.</li>
+      <li>Λοιπά με SPA → SPA. Χωρίς SPA → MSRP. Ούτε SPA ούτε κατάλογος → κράτηση παλιάς (EOL), εκτός αν υπάρχει στο ΤΙΜΕΣ_PORTAL.</li>
+      <li>SPA: αγνοείται ο INTERXION · 1 τιμή → αυτή · 2 → η μεγαλύτερη · ≥3 → η 2η μεγαλύτερη · ζεύγος JACK …BL/…AW → η μεγαλύτερη και στα δύο.</li>
+      <li>Τιμή = Τιμή Panduit ÷ μονάδα × πακέτο × P. Μονάδα = Numeric Prc. UOM. Καρούλι (RL) με βάση Μ → ÷ μήκος στροφείου. Καλώδιο (ΚΑΛ… + βάση Μ) → ÷ μονάδα × P.</li>
+      <li>Πακέτο: OVERRIDES → ΠΑΚΕΤΑ → περιγραφή (όταν η Panduit τιμολογεί ανά 100/1000). Η Panduit πουλά ανά κουτί αλλά τιμολογεί τεμάχιο, και ο κωδικός δεν είναι στο ΠΑΚΕΤΑ → ΓΙΑ_ΕΛΕΓΧΟ.</li>
+      <li>Z.A1: SPA/NMM = 0. MSRP = από το Discount Structure του καταλόγου, αλλιώς από το ΕΚΠΤΩΣΕΙΣ.</li>
+      <li>Δικλείδα Δ1: καθαρό κόστος ανά μονάδα νέο ÷ παλιό ≥ 5 ή ≤ 0,2 → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ (εκτός αν OVERRIDES «ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ»).</li>
+      <li>Στρογγυλοποίηση μισό-πάνω: &lt;1 → 4 δεκαδικά, αλλιώς 2. Το P δεν αλλάζει ποτέ.</li>
+    </ol>
+    </details>
+  </section>
+</main>
+
+<script>/*LIB_XLSX*/</script>
+<script>/*LIB_JSZIP*/</script>
+<script>/*ENGINE*/</script>
+<script>
+const EMBEDDED_PARAMS = /*PARAMS*/null;
+const PARAMS_VERSION = /*PVER*/'';
+const E = window.PanduitEngine;
+const files = {};
+let Pcur = JSON.parse(JSON.stringify(EMBEDDED_PARAMS)), Pname = 'ενσωματωμένες ' + PARAMS_VERSION;
+let last = null;
+const $ = s => document.querySelector(s);
+const fmtN = x => (x == null || x === '') ? '' : Number(x).toLocaleString('el-GR', { maximumFractionDigits: 4 });
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function paramInfo(){
+  const P = Pcur;
+  $('#pver').textContent = Pname;
+  $('#pinfo').textContent = `Σε χρήση: ${Pname} · ΠΑΚΕΤΑ ${Object.keys(P.pack).length} · ΣΤΡΟΦΕΙΑ ${Object.keys(P.reel).length} · ΚΑΤΑΛΗΞΕΙΣ ${P.suffix.length} · EOL ${Object.keys(P.eol).length} · OVERRIDES ${Object.keys(P.over).length} · ΜΟΝΑΔΑ_SPA ${Object.keys(P.spaUnit).length} · ΕΚΠΤΩΣΕΙΣ ${Object.keys(P.disc).length} · ΤΙΜΕΣ_PORTAL ${Object.keys(P.portal).length}`;
+}
+paramInfo();
+
+function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(new Uint8Array(r.result));r.onerror=rej;r.readAsArrayBuffer(f);});}
+const tick = () => new Promise(r => setTimeout(r, 20));
+
+document.querySelectorAll('.drop input').forEach(inp => inp.addEventListener('change', async () => {
+  const k = inp.dataset.k, f = inp.files[0], box = inp.parentElement;
+  box.classList.remove('has','err');
+  box.querySelector('.fn').textContent = f ? f.name : '';
+  box.querySelector('.info').textContent = f ? 'διαβάζω…' : '';
+  if (!f) { delete files[k]; ready(); return; }
+  await tick();
+  try {
+    const buf = await readFile(f);
+    const wb = XLSX.read(buf, { type: 'array' });
+    let info = '';
+    if (k === 'sap') { const s = E.parseSap(wb); files.sap = { f, buf, wb, s }; info = `${s.rows.length} γραμμές · φύλλο «${s.sheetName}»` + (s.shift.length ? ' · headers μετατοπισμένα (διορθώθηκε)' : ''); }
+    if (k === 'spa') { const s = E.parseSpa(wb); files.spa = { f, s }; info = `${s.length} γραμμές SPA`; }
+    if (k === 'cat') { const s = E.parseCatalog(wb); files.cat = { f, s }; info = `${s.items.size} κωδικοί · ${s.disc.size} κατηγορίες έκπτωσης` + (s.hasDiscountSheet ? '' : ' · ΛΕΙΠΕΙ το Discount Structure'); }
+    if (k === 'par') { const P = E.parseParams(wb); Pcur = P; Pname = f.name; paramInfo(); files.par = { f }; info = P.warnings.length ? `${P.warnings.length} προειδοποιήσεις (δες ΣΥΝΟΨΗ)` : 'ΟΚ'; }
+    box.classList.add('has'); box.querySelector('.info').textContent = info;
+  } catch (e) {
+    box.classList.add('err'); box.querySelector('.info').textContent = e.userFacing ? e.message : 'Δεν διαβάστηκε: ' + e.message;
+    delete files[k];
+    if (k === 'par') { Pcur = JSON.parse(JSON.stringify(EMBEDDED_PARAMS)); Pname = 'ενσωματωμένες ' + PARAMS_VERSION; paramInfo(); }
+  }
+  ready();
+}));
+function ready(){ $('#go').disabled = !(files.sap && files.spa && files.cat); }
+
+$('#go').addEventListener('click', async () => {
+  $('#go').disabled = true; $('#busy').style.display = 'inline'; await tick();
+  try {
+    const { sap, spa, cat } = { sap: files.sap.s, spa: files.spa.s, cat: files.cat.s };
+    const res = E.run(sap, spa, cat, Pcur);
+    const tests = E.selfTests();
+    const changes = res.rows.filter(r => r.newPrice !== r.oldPrice || r.newZ !== r.oldZ).map(r => ({ row: r.row, price: r.newPrice, za1: r.newZ }));
+    const out = await E.patchXlsx(files.sap.buf, sap.sheetName, sap.priceCol, sap.za1Col, changes);
+    const outWb = XLSX.read(out, { type: 'array' });
+    const probs = E.integrity(files.sap.wb, outWb, sap.sheetName, sap.priceCol, sap.za1Col, sap.headerRow);
+    const back = E.parseSap(outWb);
+    const wrong = back.rows.filter((r, i) => Math.abs((r.oldPrice || 0) - (res.rows[i].newPrice || 0)) > 1e-9 || r.oldZ !== res.rows[i].newZ).length;
+    const integ = probs.length || wrong ? `ΑΠΟΤΥΓΧΑΝΕΙ (${probs.slice(0,5).join(', ')}${wrong ? ' · ' + wrong + ' τιμές δεν γράφτηκαν σωστά' : ''})` : 'ΠΕΡΝΑ';
+    const now = new Date();
+    const meta = { date: now.toLocaleString('el-GR'), sap: files.sap.f.name, spa: files.spa.f.name, cat: files.cat.f.name, params: Pname, tests, integrity: integ };
+    const ctl = E.controlWorkbook(res, meta, Pcur);
+    last = { res, out, ctl, tests, integ, name: files.sap.f.name, stamp: now.toISOString().slice(0, 10) };
+    render(res, tests, integ, sap);
+  } catch (e) {
+    alert(e.userFacing ? e.message : 'Σφάλμα: ' + e.message); console.error(e);
+  }
+  $('#busy').style.display = 'none'; ready();
+});
+
+function render(res, tests, integ, sap){
+  const R = res.rows, c = f => R.filter(f).length;
+  const changed = c(r => r.newPrice !== r.oldPrice || r.newZ !== r.oldZ), rev = R.filter(r => r.review);
+  const kept = rev.filter(r => r.newPrice === r.oldPrice && r.newZ === r.oldZ).length;
+  $('#tiles').innerHTML = [
+    ['Γραμμές', R.length], ['Άλλαξαν', changed], ['ΓΙΑ_ΕΛΕΓΧΟ', rev.length],
+    ['NETKEY MID MARKET', c(r => r.source === 'NMM')], ['SPA', c(r => r.source === 'SPA')], ['MSRP', c(r => r.source === 'MSRP')], ['EOL', c(r => r.source === 'EOL')], ['EXPIRED', c(r => r.expired)]
+  ].map(([l, n]) => `<div class="tile"><div class="n">${n.toLocaleString('el-GR')}</div><div class="l">${l}</div></div>`).join('');
+  const d3 = c(r => r.source === 'MSRP' && r.newZ === 0 && !r.review), d4 = c(r => (r.source === 'SPA' || r.source === 'NMM') && r.newZ !== 0 && !r.review);
+  const items = [
+    [tests.every(t => t.ok) ? 'ok' : 'bad', `Τεστ αριθμητικής 7 κωδικών: ${tests.every(t => t.ok) ? 'ΠΕΡΝΑ' : 'ΑΠΟΤΥΓΧΑΝΕΙ ' + tests.filter(t => !t.ok).map(t => t.pn).join(', ')}`],
+    [integ === 'ΠΕΡΝΑ' ? 'ok' : 'bad', `Το αρχείο SAP άλλαξε μόνο σε «Αρχική τιμή» και «Z.A1»: ${integ}`],
+    [d3 ? 'bad' : 'ok', `Δ3 MSRP με Z.A1 = 0: ${d3}`],
+    [d4 ? 'bad' : 'ok', `Δ4 SPA/NMM με Z.A1 ≠ 0: ${d4}`],
+  ];
+  if (rev.length) items.push(['warn', `${rev.length} γραμμές ΓΙΑ_ΕΛΕΓΧΟ · ${kept} κράτησαν την παλιά τιμή · απάντησε στο ΠΑΡΑΜΕΤΡΟΙ και ξανατρέξε`]);
+  const d5 = c(r => r.flags.includes('Δ5 SPA→MSRP')); if (d5) items.push(['warn', `Δ5: ${d5} γραμμές πήγαν από SPA σε MSRP με ανατίμηση (φύλλο SPA→MSRP_ΚΟΣΤΟΣ)`]);
+  sap.shift.forEach(s => items.push(['warn', 'Headers SAP μετατοπισμένα, διαβάστηκε από τα δεδομένα: ' + s]));
+  Pcur.warnings.forEach(w => items.push(['warn', 'Παράμετροι: ' + w]));
+  $('#checks').innerHTML = items.map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('');
+  $('#rev-n').textContent = `(${rev.length})`;
+  $('#rev-wrap').open = rev.length > 0;
+  $('#rev').innerHTML = '<tr><th>Part Number</th><th>Έλεγχος</th><th>Τι βρέθηκε</th><th class="num">Παλιά</th><th>Υποψήφιες</th></tr>' +
+    rev.slice(0, 300).map(r => `<tr><td>${esc(r.pn)}</td><td>${esc(r.review.check)}</td><td>${esc(r.review.text)}</td><td class="num">${fmtN(r.oldPrice)}</td><td>${(r.cands || []).map(x => esc(x[0]) + ': ' + fmtN(x[1])).join('<br>')}</td></tr>`).join('');
+  const big = R.filter(r => r.ratio && (r.newPrice !== r.oldPrice)).sort((a, b) => Math.abs(Math.log(b.ratio)) - Math.abs(Math.log(a.ratio))).slice(0, 40);
+  $('#big').innerHTML = '<tr><th>Part Number</th><th>Περιγραφή</th><th class="num">Παλιά</th><th class="num">Νέα</th><th class="num">Z.A1</th><th class="num">Καθαρό ×</th><th>Πηγή & αναγωγή</th></tr>' +
+    big.map(r => `<tr><td>${esc(r.pn)}</td><td>${esc(r.desc)}</td><td class="num">${fmtN(r.oldPrice)}</td><td class="num">${fmtN(r.newPrice)}</td><td class="num">${r.oldZ}→${r.newZ}</td><td class="num">${r.ratio.toFixed(2)}</td><td>${esc(r.how)}</td></tr>`).join('');
+  $('#out').hidden = false; $('#out').scrollIntoView({ behavior: 'smooth' });
+}
+
+function download(bytes, name, type){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type })); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+$('#dl-sap').addEventListener('click', () => {
+  const m = last.name.match(/^(.*?)(\.[^.]+)$/) || [null, last.name, '.xlsx'];
+  download(last.out, `${m[1]}_ενημερωμένο_${last.stamp}${m[2]}`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+});
+$('#dl-ctl').addEventListener('click', () => {
+  download(XLSX.write(last.ctl, { type: 'array', bookType: 'xlsx' }), `ΕΛΕΓΧΟΣ_Panduit_${last.stamp}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+});
+$('#dl-par').addEventListener('click', () => {
+  download(XLSX.write(E.paramsToWorkbook(Pcur), { type: 'array', bookType: 'xlsx' }), `ΠΑΡΑΜΕΤΡΟΙ_Panduit_${new Date().toISOString().slice(0,10)}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+});
+</script>
+</body>
+</html>
