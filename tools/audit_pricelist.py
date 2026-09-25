@@ -31,7 +31,6 @@ LAT2GR = str.maketrans({'A': 'Α', 'B': 'Β', 'E': 'Ε', 'Z': 'Ζ', 'H': 'Η', '
                         'M': 'Μ', 'N': 'Ν', 'O': 'Ο', 'P': 'Ρ', 'T': 'Τ', 'Y': 'Υ', 'X': 'Χ'})
 PACK_RE = [r'(\d+)\s*ΤΕΜ', r'(\d+)\s*ΤΜΧ', r'ΣΥΣ\.?Κ?\.?\s*(\d+)', r'\((\d+)\s*Τ',
            r'(\d+)\s*ΤΕ$', r'(\d+)\s*ΤΜ$', r'(\d+)\s*Τ$']
-COLOURS = ['ΜΠΛΕ', 'ΠΡΑΣ', 'ΚΟΚΚ', 'ΚΙΤΡ', 'ΓΚΡΙ', 'ΜΑΥΡ', 'ΠΟΡΤΟΚ', 'ΒΙΟΛ', 'ΜΩΒ', 'ΡΟΖ']
 
 
 def gr(s):
@@ -53,7 +52,7 @@ def src_kind(s):
         return 'NMM'
     if s.startswith('SPA'):
         return 'SPA'
-    if s.startswith('MSRP'):
+    if s.startswith('MSRP') or s.startswith('PORTAL'):
         return 'MSRP'
     return 'EOL'
 
@@ -82,13 +81,16 @@ def load(path):
 
 def load_params(path):
     pk = pd.read_excel(path, sheet_name='ΠΑΚΕΤΑ', header=1)
-    return dict(zip(pk['Part Number'], pk['ΠΑΚΕΤΟ ή ΤΕΜΑΧΙΟ;'])), dict(zip(pk['Part Number'], pk['Κουτί (Inner)']))
+    ov = pd.read_excel(path, sheet_name='OVERRIDES', header=1)
+    accepted = set(ov.loc[ov['Τι επιβάλλουμε'].astype(str).str.contains('ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ'), 'Part Number'])
+    return (dict(zip(pk['Part Number'], pk['ΠΑΚΕΤΟ ή ΤΕΜΑΧΙΟ;'])), dict(zip(pk['Part Number'], pk['Κουτί (Inner)'])),
+            accepted)
 
 
 def audit(old_path, new_path, params_path):
     old = load(old_path)
     new = load(new_path)
-    pk_answer, pk_inner = load_params(params_path)
+    pk_answer, pk_inner, accepted = load_params(params_path)
     m = new.merge(old[['MAT', 'P', 'PRICE', 'ZA1']], on='MAT', suffixes=('', '_old'))
     m['kind'] = m.SRC.map(src_kind)
     m['net_old'] = m.PRICE_old * (1 + m.ZA1_old / 100) / m.P_old
@@ -136,7 +138,7 @@ def audit(old_path, new_path, params_path):
                 round(r.PRICE * r.pack, 2), f'ανά κουτί (×{r.pack})')
             flagged = True
         # Δ1: ακραία μεταβολή καθαρού κόστους ανά μονάδα
-        if not flagged and (r.ratio >= HI or r.ratio <= LO):
+        if not flagged and r.PN not in accepted and (r.ratio >= HI or r.ratio <= LO):
             cand, note, why = None, '', f'Καθαρό κόστος ανά μονάδα ×{r.ratio:.3g}.'
             if r.pack > 1 and r.xmult != r.pack and r.ratio <= LO:
                 cand, note = round(r.PRICE * r.pack, 2), f'ανά κουτί (×{r.pack})'
