@@ -1,4 +1,4 @@
-/* Panduit pricing engine · RULES V3.1
+/* Panduit pricing engine · RULES V3.2
  * Pure functions. Needs XLSX (SheetJS) and JSZip on the global scope (browser) or passed in (node).
  * Only "Αρχική τιμή" and "Z.A1 Τιμ. %" are ever written to the SAP file.
  */
@@ -31,7 +31,6 @@
     'ΜΗΚΗ_SPA': '0,5;1;2;3;5',
     'ΧΡΩΜΑΤΑ': 'ΜΠΛΕ;ΠΡΑΣ;ΚΟΚΚ;ΚΙΤΡ;ΜΑΥΡ;ΠΟΡΤΟΚ;ΒΙΟΛ;ΡΟΖ',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'ΑΚΡΟΔΕΚΤΗΣ;ΚΩΣ ΠΡΕΣΑΣ',
-    'ΟΙΚΟΓΕΝΕΙΕΣ_ΚΑΤΑΛΗΞΕΩΝ': 'NU;PU;PS;PF;NF',
     'ΟΡΙΟ_ΠΑΝΩ': '5',
     'ΟΡΙΟ_ΚΑΤΩ': '0,2',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': '1,25',
@@ -42,7 +41,6 @@
     'ΜΗΚΗ_SPA': 'Μήκη (m) λευκού/γκρι/μωβ patch cord που παίρνουν SPA (κανόνας 4)',
     'ΧΡΩΜΑΤΑ': 'Ρίζες χρωμάτων για τον κανόνα 3. ΛΕΥΚΟ, ΓΚΡΙ, ΜΩΒ ΔΕΝ είναι χρώματα',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'Λέξεις περιγραφής για ακροδέκτες (κανόνας 2, πάντα MSRP, πάντα ανά τεμάχιο)',
-    'ΟΙΚΟΓΕΝΕΙΕΣ_ΚΑΤΑΛΗΞΕΩΝ': 'Πρόθεμα κωδικού όπου ισχύει ο πίνακας ΚΑΤΑΛΗΞΕΙΣ',
     'ΟΡΙΟ_ΠΑΝΩ': 'Δ1: καθαρό νέο ÷ παλιό ≥ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΟΡΙΟ_ΚΑΤΩ': 'Δ1: καθαρό νέο ÷ παλιό ≤ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': 'Δ5: SPA → MSRP με καθαρό ↑ ≥ αυτό → λίστα SPA→MSRP_ΚΟΣΤΟΣ',
@@ -188,9 +186,7 @@
     'ΠΑΚΕΤΑ': { cols: ['Part Number', 'Περιγραφή', 'Prc.UOM', 'Κουτί (Inner)', 'ΠΑΚΕΤΟ ή ΤΕΜΑΧΙΟ;', 'Πηγή'],
       help: 'Πόσα τεμάχια έχει 1 PC του SAP. ΠΑΚΕΤΟ → πακέτο = Κουτί (Inner). ΤΕΜΑΧΙΟ → πακέτο = 1. Υπερισχύει κάθε αυτόματης ανίχνευσης. Εδώ γράφεις τις απαντήσεις του ΓΙΑ_ΕΛΕΓΧΟ (ΤΕΜ/ΚΟΥΤΙ).' },
     'ΣΤΡΟΦΕΙΑ': { cols: ['Part Number', 'Περιγραφή', 'Μήκος (m)', 'Πηγή'],
-      help: 'Μήκος στροφείου. Χρειάζεται μόνο όταν Prc.UOM = RL και SAP βάση = Μ. Σειρά: αυτό το φύλλο → Meters/Reel καταλόγου → ΚΑΤΑΛΗΞΕΙΣ.' },
-    'ΚΑΤΑΛΗΞΕΙΣ': { cols: ['Κατάληξη κωδικού', 'Μήκος στροφείου (m)', 'Παραδείγματα'],
-      help: 'Κατάληξη κωδικού → μήκος στροφείου. Μόνο για τις οικογένειες του ΡΥΘΜΙΣΕΙΣ › ΟΙΚΟΓΕΝΕΙΕΣ_ΚΑΤΑΛΗΞΕΩΝ.' },
+      help: 'Μήκος στροφείου. Χρειάζεται μόνο όταν Prc.UOM = RL και SAP βάση = Μ. Σειρά: αυτό το φύλλο → Meters/Reel καταλόγου. Αν λείπουν και τα δύο: κράτηση παλιάς τιμής, ΓΙΑ_ΕΛΕΓΧΟ.' },
     'EOL_ΕΠΙΒΕΒΑΙΩΜΕΝΑ': { cols: ['Part Number', 'Λόγος', 'Πηγή'],
       help: 'Καταργημένοι κωδικοί. Κρατούν παλιά τιμή και Z.A1, δεν υπολογίζονται.' },
     'OVERRIDES': { cols: ['Part Number', 'Περιγραφή', 'Τι επιβάλλουμε', 'Γιατί', 'Πηγή'],
@@ -206,7 +202,7 @@
   };
 
   function parseParams(wb) {
-    const P = { pack: {}, reel: {}, suffix: [], eol: {}, over: {}, spaUnit: {}, disc: {}, portal: {}, settings: { ...DEFAULT_SETTINGS }, warnings: [] };
+    const P = { pack: {}, reel: {}, eol: {}, over: {}, spaUnit: {}, disc: {}, portal: {}, settings: { ...DEFAULT_SETTINGS }, warnings: [] };
     const get = (name) => {
       const ws = sheetByName(wb, [name]);
       if (!ws) return null;
@@ -227,8 +223,6 @@
       else if (ans) P.warnings.push(`ΠΑΚΕΤΑ ${pn}: άγνωστη απάντηση «${ans}» (θέλει ΠΑΚΕΤΟ ή ΤΕΜΑΧΙΟ)`);
     }
     for (const r of get('ΣΤΡΟΦΕΙΑ') || []) { const L = num(r[K('Μήκος (m)')]); if (L) P.reel[norm(r[K('Part Number')])] = { len: L, desc: norm(r[K('Περιγραφή')]), src: norm(r[K('Πηγή')]) }; }
-    for (const r of get('ΚΑΤΑΛΗΞΕΙΣ') || []) { const L = num(r[K('Μήκος στροφείου (m)')]); if (L) P.suffix.push({ sfx: norm(r[K('Κατάληξη κωδικού')]).toUpperCase(), len: L, ex: norm(r[K('Παραδείγματα')]) }); }
-    P.suffix.sort((a, b) => b.sfx.length - a.sfx.length);
     for (const r of get('EOL_ΕΠΙΒΕΒΑΙΩΜΕΝΑ') || []) P.eol[norm(r[K('Part Number')])] = { why: norm(r[K('Λόγος')]), src: norm(r[K('Πηγή')]) };
     for (const r of get('OVERRIDES') || []) {
       const pn = norm(r[K('Part Number')]), t = norm(r[K('Τι επιβάλλουμε')]);
@@ -258,7 +252,6 @@
     };
     add('ΠΑΚΕΤΑ', Object.entries(P.pack).map(([pn, v]) => [pn, v.desc, v.uom, v.inner, v.box ? 'ΠΑΚΕΤΟ' : 'ΤΕΜΑΧΙΟ', v.src]));
     add('ΣΤΡΟΦΕΙΑ', Object.entries(P.reel).map(([pn, v]) => [pn, v.desc, v.len, v.src]));
-    add('ΚΑΤΑΛΗΞΕΙΣ', P.suffix.map(v => [v.sfx, v.len, v.ex]));
     add('EOL_ΕΠΙΒΕΒΑΙΩΜΕΝΑ', Object.entries(P.eol).map(([pn, v]) => [pn, v.why, v.src]));
     add('OVERRIDES', Object.entries(P.over).map(([pn, v]) => [pn, v.desc, v.text, v.why, v.src]));
     add('ΜΟΝΑΔΑ_SPA', Object.entries(P.spaUnit).map(([pn, v]) => [pn, v.div, v.why, v.src]));
@@ -320,7 +313,6 @@
     const lengths = splitList(S['ΜΗΚΗ_SPA']).map(num);
     const colours = splitList(S['ΧΡΩΜΑΤΑ']).map(gr);
     const termWords = splitList(S['ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ']).map(gr);
-    const fams = splitList(S['ΟΙΚΟΓΕΝΕΙΕΣ_ΚΑΤΑΛΗΞΕΩΝ']).map(s => s.toUpperCase());
     const spa = spaTable(spaRows, S);
     const SPA = spa.map;
 
@@ -388,9 +380,8 @@
       else if (cat) {
         if (cat.uom === 'RL') {
           if (gr(r.base) === 'Μ') {
-            const sfx = fams.some(f => r.pn.toUpperCase().startsWith(f)) ? P.suffix.find(s => r.pn.toUpperCase().endsWith(s.sfx)) : null;
-            const len = (P.reel[r.pn] && P.reel[r.pn].len) || cat.mr || (sfx && sfx.len);
-            if (!len) { o.review = { check: 'ΣΤΡΟΦΕΙΟ ΧΩΡΙΣ ΜΗΚΟΣ', text: 'Prc.UOM = RL και βάση Μ, αλλά δεν βρέθηκε μήκος στροφείου (ΣΤΡΟΦΕΙΑ / Meters/Reel / ΚΑΤΑΛΗΞΕΙΣ).', answer: 'Γράψε το μήκος στο ΣΤΡΟΦΕΙΑ.' }; o.source = src; o.how = why; res.push(o); continue; }
+            const len = (P.reel[r.pn] && P.reel[r.pn].len) || cat.mr;
+            if (!len) { o.review = { check: 'ΣΤΡΟΦΕΙΟ ΧΩΡΙΣ ΜΗΚΟΣ', text: 'Prc.UOM = RL και βάση Μ, αλλά δεν βρέθηκε μήκος στροφείου (ΣΤΡΟΦΕΙΑ / Meters/Reel).', answer: 'Γράψε το μήκος στο ΣΤΡΟΦΕΙΑ.' }; o.source = src; o.how = why; res.push(o); continue; }
             unit = len; unitTxt = `÷${len} (στροφείο)`;
           } else { unit = 1; unitTxt = 'καρούλι = τεμάχιο'; }
         } else { unit = cat.nuom || 1; unitTxt = unit > 1 ? `÷${unit}` : ''; }
