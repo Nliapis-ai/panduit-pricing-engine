@@ -50,13 +50,19 @@ code{font-size:13px}
 </head>
 <body>
 <main>
+  <div id="nojs" class="card bad" style="border-color:var(--bad)">
+    <b>Η σελίδα δεν μπορεί να τρέξει εδώ.</b><br>
+    Είναι ανοιχτή σε παράθυρο προεπισκόπησης (Claude, Outlook, Teams, SharePoint, OneDrive) που μπλοκάρει τα scripts.<br>
+    Κατέβασέ την στον υπολογιστή, κάνε δεξί κλικ στο αρχείο → <b>Άνοιγμα με → Google Chrome</b> ή <b>Microsoft Edge</b>.
+  </div>
+  <div id="jserr" class="card bad" hidden></div>
   <h1>Ενημέρωση τιμών Panduit</h1>
   <p class="sub">RULES V3.1 · παράμετροι <span id="pver"></span> · Όλα τρέχουν μέσα στον browser. Κανένα αρχείο δεν φεύγει από τον υπολογιστή σου.</p>
 
   <section class="card">
     <h2>1. Αρχεία</h2>
     <div class="files">
-      <label class="drop" id="d-sap"><input type="file" accept=".xlsx,.xlsm" data-k="sap"><b>Αρχείο SAP</b><span class="req">υποχρεωτικό · export από pricing</span><div class="fn"></div><div class="info"></div></label>
+      <label class="drop" id="d-sap"><input type="file" accept=".xlsx,.xlsm" data-k="sap"><b>Αρχείο SAP</b><span class="req">υποχρεωτικό · export από pricing · κλικ ή σύρε το αρχείο εδώ</span><div class="fn"></div><div class="info"></div></label>
       <label class="drop" id="d-spa"><input type="file" accept=".xlsx,.xlsm" data-k="spa"><b>SPA MONITORING</b><span class="req">υποχρεωτικό · φύλλο CONNECTIVITY</span><div class="fn"></div><div class="info"></div></label>
       <label class="drop" id="d-cat"><input type="file" accept=".xlsx,.xlsm" data-k="cat"><b>Κατάλογος EUR MSRP</b><span class="req">υποχρεωτικό · English + Discount Structure</span><div class="fn"></div><div class="info"></div></label>
       <label class="drop" id="d-par"><input type="file" accept=".xlsx,.xlsm" data-k="par"><b>ΠΑΡΑΜΕΤΡΟΙ</b><span class="req">προαιρετικό · αντικαθιστά τις ενσωματωμένες</span><div class="fn"></div><div class="info"></div></label>
@@ -106,6 +112,9 @@ code{font-size:13px}
   </section>
 </main>
 
+<script>
+window.addEventListener('error', function (e) { var d = document.getElementById('jserr'); if (d) { d.hidden = false; d.textContent = 'Σφάλμα στη σελίδα: ' + (e.message || e) + ' · Στείλε μου αυτό το μήνυμα.'; } });
+</script>
 <script>/*LIB_XLSX*/</script>
 <script>/*LIB_JSZIP*/</script>
 <script>/*ENGINE*/</script>
@@ -113,6 +122,8 @@ code{font-size:13px}
 const EMBEDDED_PARAMS = /*PARAMS*/null;
 const PARAMS_VERSION = /*PVER*/'';
 const E = window.PanduitEngine;
+document.getElementById('nojs').remove();
+if (!window.XLSX || !window.JSZip || !E) { const d = document.getElementById('jserr'); d.hidden = false; d.textContent = 'Δεν φόρτωσαν οι βιβλιοθήκες της σελίδας. Άνοιξε το αρχείο με Chrome ή Edge.'; }
 const files = {};
 let Pcur = JSON.parse(JSON.stringify(EMBEDDED_PARAMS)), Pname = 'ενσωματωμένες ' + PARAMS_VERSION;
 let last = null;
@@ -130,7 +141,8 @@ paramInfo();
 function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(new Uint8Array(r.result));r.onerror=rej;r.readAsArrayBuffer(f);});}
 const tick = () => new Promise(r => setTimeout(r, 20));
 
-document.querySelectorAll('.drop input').forEach(inp => inp.addEventListener('change', async () => {
+document.querySelectorAll('.drop input').forEach(inp => inp.addEventListener('change', async () => { await handle(inp); }));
+async function handle(inp) {
   const k = inp.dataset.k, f = inp.files[0], box = inp.parentElement;
   box.classList.remove('has','err');
   box.querySelector('.fn').textContent = f ? f.name : '';
@@ -152,7 +164,12 @@ document.querySelectorAll('.drop input').forEach(inp => inp.addEventListener('ch
     if (k === 'par') { Pcur = JSON.parse(JSON.stringify(EMBEDDED_PARAMS)); Pname = 'ενσωματωμένες ' + PARAMS_VERSION; paramInfo(); }
   }
   ready();
-}));
+}
+document.querySelectorAll('.drop').forEach(box => {
+  box.addEventListener('dragover', e => { e.preventDefault(); box.style.borderColor = 'var(--accent)'; });
+  box.addEventListener('dragleave', () => { box.style.borderColor = ''; });
+  box.addEventListener('drop', e => { e.preventDefault(); box.style.borderColor = ''; const inp = box.querySelector('input'); inp.files = e.dataTransfer.files; handle(inp); });
+});
 function ready(){ $('#go').disabled = !(files.sap && files.spa && files.cat); }
 
 $('#go').addEventListener('click', async () => {
