@@ -26,7 +26,7 @@
 
   // ---------- default settings (ΡΥΘΜΙΣΕΙΣ) ----------
   const DEFAULT_SETTINGS = {
-    'SPA_ΑΠΟΚΛΕΙΣΜΟΣ': 'INTERXION',
+    'SPA_ΑΠΟΚΛΕΙΣΜΟΣ': 'INTERXION;RAYCAP',
     'NMM_CUSTOMER': 'NETKEY MID MARKET',
     'ΜΗΚΗ_SPA': '0,5;1;2;3;5',
     'ΧΡΩΜΑΤΑ': 'ΜΠΛΕ;ΠΡΑΣ;ΚΟΚΚ;ΚΙΤΡ;ΜΑΥΡ;ΠΟΡΤΟΚ;ΒΙΟΛ;ΡΟΖ',
