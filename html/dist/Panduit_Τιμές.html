@@ -533,7 +533,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           res.push(o); continue;
         }
         o.source = 'EOL';
-        o.how = sp ? `υπάρχει SPA, αλλά ${isTerm ? 'κανόνας 2' : 'κανόνας 3/4'} → MSRP και ο κωδικός είναι εκτός καταλόγου → κράτηση παλιάς` : 'χωρίς SPA και εκτός καταλόγου → κράτηση παλιάς';
+        const ruleTxt = isTerm ? 'κανόνας 2 (ακροδέκτης)' : isRack ? 'κανόνας 2β (rack/PDU/fiber runner)' : 'κανόνας 3/4';
+        if (sp) {
+          o.review = { check: 'ΕΚΤΟΣ ΚΑΤΑΛΟΓΟΥ, ΑΓΝΟΕΙΤΑΙ SPA', text: `${ruleTxt} → πάντα MSRP, αλλά ο κωδικός είναι εκτός καταλόγου. Υπάρχει SPA ${fmt(spaPrice)} (${sp.cust}) που αγνοείται επίτηδες. Κράτηση παλιάς τιμής.`, answer: 'Βρες πραγματική τιμή καταλόγου (νέα έκδοση καταλόγου ή ΤΙΜΕΣ_PORTAL) ή επιβεβαίωσε ότι η παλιά τιμή μένει σωστή.' };
+          o.cands = [['SPA ' + sp.cust + ' (αγνοείται)', round(spaPrice)], ['παλιά τιμή', r.oldPrice]];
+        }
+        o.how = sp ? `υπάρχει SPA, αλλά ${ruleTxt} → MSRP και ο κωδικός είναι εκτός καταλόγου → κράτηση παλιάς, ΓΙΑ_ΕΛΕΓΧΟ` : 'χωρίς SPA και εκτός καταλόγου → κράτηση παλιάς';
         res.push(o); continue;
       }
       const why = src === 'NMM' ? 'κανόνας 1 (NETKEY MID MARKET)' : isTerm ? 'κανόνας 2 (ακροδέκτης)' : isRack ? 'κανόνας 2β (rack/PDU/fiber runner)' :
