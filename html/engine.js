@@ -31,6 +31,7 @@
     'ΜΗΚΗ_SPA': '0,5;1;2;3;5',
     'ΧΡΩΜΑΤΑ': 'ΜΠΛΕ;ΠΡΑΣ;ΚΟΚΚ;ΚΙΤΡ;ΜΑΥΡ;ΠΟΡΤΟΚ;ΒΙΟΛ;ΡΟΖ',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'ΑΚΡΟΔΕΚΤ;ΚΩΣ',
+    'ΛΕΞΕΙΣ_RACK': 'RACK;FIBER RUNNER;PDU;CABINET;ΙΚΡΙΩΜΑ',
     'ΟΡΙΟ_ΠΑΝΩ': '5',
     'ΟΡΙΟ_ΚΑΤΩ': '0,2',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': '1,25',
@@ -41,6 +42,7 @@
     'ΜΗΚΗ_SPA': 'Μήκη (m) λευκού/γκρι/μωβ patch cord που παίρνουν SPA (κανόνας 4)',
     'ΧΡΩΜΑΤΑ': 'Ρίζες χρωμάτων για τον κανόνα 3. ΛΕΥΚΟ, ΓΚΡΙ, ΜΩΒ ΔΕΝ είναι χρώματα',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'Λέξεις περιγραφής για ακροδέκτες (κανόνας 2, πάντα MSRP, πάντα ανά τεμάχιο)',
+    'ΛΕΞΕΙΣ_RACK': 'Λέξεις περιγραφής για rack/PDU/fiber runner (κανόνας 2β, πάντα MSRP — ειδικές τιμές έργων δεν γίνονται γενική τιμή)',
     'ΟΡΙΟ_ΠΑΝΩ': 'Δ1: καθαρό νέο ÷ παλιό ≥ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΟΡΙΟ_ΚΑΤΩ': 'Δ1: καθαρό νέο ÷ παλιό ≤ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': 'Δ5: SPA → MSRP με καθαρό ↑ ≥ αυτό → λίστα SPA→MSRP_ΚΟΣΤΟΣ',
@@ -313,6 +315,7 @@
     const lengths = splitList(S['ΜΗΚΗ_SPA']).map(num);
     const colours = splitList(S['ΧΡΩΜΑΤΑ']).map(gr);
     const termWords = splitList(S['ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ']).map(gr);
+    const rackWords = splitList(S['ΛΕΞΕΙΣ_RACK']).map(gr);
     const spa = spaTable(spaRows, S);
     const SPA = spa.map;
 
@@ -338,6 +341,7 @@
       const spaPrice = sp ? (jackPair.get(r.pn) ?? sp.price) : null;
       const isCable = /^ΚΑΛ[ .]/.test(d) && gr(r.base) === 'Μ';
       const isTerm = termWords.some(w => d.includes(w));
+      const isRack = rackWords.some(w => d.includes(w));
       const isCord = CORD_RE.test(d);
       const colour = colours.find(c => new RegExp('(^|[^Α-ΩA-Z0-9])' + c).test(d));
       const L = isCord ? cordLength(r.desc) : null;
@@ -351,7 +355,7 @@
       // 1. source
       let src;
       if (sp && sp.kind === 'NMM') src = 'NMM';
-      else if (isTerm) src = 'MSRP';
+      else if (isTerm || isRack) src = 'MSRP';
       else if (isCord) src = colour ? 'MSRP' : (sp && lengths.includes(L) ? 'SPA' : 'MSRP');
       else if (sp) src = 'SPA';
       else src = 'MSRP';
@@ -369,7 +373,7 @@
         o.how = sp ? `υπάρχει SPA, αλλά ${isTerm ? 'κανόνας 2' : 'κανόνας 3/4'} → MSRP και ο κωδικός είναι εκτός καταλόγου → κράτηση παλιάς` : 'χωρίς SPA και εκτός καταλόγου → κράτηση παλιάς';
         res.push(o); continue;
       }
-      const why = src === 'NMM' ? 'κανόνας 1 (NETKEY MID MARKET)' : isTerm ? 'κανόνας 2 (ακροδέκτης)' :
+      const why = src === 'NMM' ? 'κανόνας 1 (NETKEY MID MARKET)' : isTerm ? 'κανόνας 2 (ακροδέκτης)' : isRack ? 'κανόνας 2β (rack/PDU/fiber runner)' :
         isCord ? (colour ? `κανόνας 3 (χρώμα ${colour})` : src === 'SPA' ? `κανόνας 4 (cord ${fmt(L)}m)` : `κανόνας 4 (cord ${L == null ? 'χωρίς μήκος' : fmt(L) + 'm'} → MSRP)`) :
         src === 'SPA' ? 'κανόνας 5 (SPA)' : 'κανόνας 6 (MSRP)';
       const base = src === 'MSRP' ? cat.msrp : spaPrice;
