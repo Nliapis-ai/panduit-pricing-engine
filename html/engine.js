@@ -1,4 +1,4 @@
-/* Panduit pricing engine · RULES V3.2
+/* Panduit pricing engine · RULES V3.3
  * Pure functions. Needs XLSX (SheetJS) and JSZip on the global scope (browser) or passed in (node).
  * Only "Αρχική τιμή" and "Z.A1 Τιμ. %" are ever written to the SAP file.
  */
