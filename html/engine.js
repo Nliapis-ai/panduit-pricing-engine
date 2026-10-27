@@ -194,7 +194,7 @@
     'EOL_ΕΠΙΒΕΒΑΙΩΜΕΝΑ': { cols: ['Part Number', 'Λόγος', 'Πηγή'],
       help: 'Καταργημένοι κωδικοί. Κρατούν παλιά τιμή και Z.A1, δεν υπολογίζονται.' },
     'OVERRIDES': { cols: ['Part Number', 'Περιγραφή', 'Τι επιβάλλουμε', 'Γιατί', 'Πηγή'],
-      help: 'Υπερισχύουν των πάντων. «Τι επιβάλλουμε» καταλαβαίνει: «πακέτο = N», «μονάδα = N», «ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ» (περνά τη Δ1). Μπορείς να γράψεις πολλά χωρισμένα με ;' },
+      help: 'Υπερισχύουν των πάντων. «Τι επιβάλλουμε» καταλαβαίνει: «πακέτο = N», «μονάδα = N», «ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ» (περνά τη Δ1), «ΠΑΝΤΑ MSRP» (ποτέ SPA πελάτη, όπως ο κανόνας 2β). Μπορείς να γράψεις πολλά χωρισμένα με ;' },
     'ΜΟΝΑΔΑ_SPA': { cols: ['Part Number', 'Διαιρέτης', 'Γιατί', 'Πηγή'],
       help: 'Διαιρέτης για SPA κωδικών που ΔΕΝ είναι στον κατάλογο (π.χ. 1000 = SPA ανά 1000m). Χωρίς εγγραφή → ΓΙΑ_ΕΛΕΓΧΟ.' },
     'ΕΚΠΤΩΣΕΙΣ': { cols: ['Κατηγορία', 'Z.A1', 'Πηγή'],
@@ -236,7 +236,8 @@
       let m1 = g.match(/ΡΑΚΕΤΟ\s*=\s*(\d+)|ΠΑΚΕΤΟ\s*=\s*(\d+)/); if (m1) { o.pack = Number(m1[1] || m1[2]); hit = true; }
       let m2 = g.match(/ΜΟΝΑΔΑ\s*=\s*(\d+)/); if (m2) { o.unit = Number(m2[1]); hit = true; }
       if (/ΑΡΟΔΟΧΗ|ΑΠΟΔΟΧΗ/.test(g)) { o.accept = true; hit = true; }
-      if (!hit) P.warnings.push(`OVERRIDES ${pn}: δεν καταλαβαίνω «${t}» (δεκτά: πακέτο = N · μονάδα = N · ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ)`);
+      if (g.includes(gr('MSRP'))) { o.msrp = true; hit = true; }
+      if (!hit) P.warnings.push(`OVERRIDES ${pn}: δεν καταλαβαίνω «${t}» (δεκτά: πακέτο = N · μονάδα = N · ΑΠΟΔΟΧΗ ΑΠΟΚΛΙΣΗΣ · ΠΑΝΤΑ MSRP)`);
       P.over[pn] = Object.assign(P.over[pn] || {}, o);
     }
     for (const r of get('ΜΟΝΑΔΑ_SPA') || []) { const d = num(r[K('Διαιρέτης')]); if (d) P.spaUnit[norm(r[K('Part Number')])] = { div: d, why: norm(r[K('Γιατί')]), src: norm(r[K('Πηγή')]) }; }
@@ -344,7 +345,7 @@
       const spaPrice = sp ? (jackPair.get(r.pn) ?? sp.price) : null;
       const isCable = /^ΚΑΛ[ .]/.test(d) && gr(r.base) === 'Μ';
       const isTerm = termWords.some(w => d.includes(w));
-      const isRack = rackWords.some(w => d.includes(w)) || !!(cat && cat.pc.some(c => c && rackCats.includes(key(c))));
+      const isRack = !!ov.msrp || rackWords.some(w => d.includes(w)) || !!(cat && cat.pc.some(c => c && rackCats.includes(key(c))));
       const isCord = CORD_RE.test(d);
       const colour = colours.find(c => new RegExp('(^|[^Α-ΩA-Z0-9])' + c).test(d));
       const L = isCord ? cordLength(r.desc) : null;
