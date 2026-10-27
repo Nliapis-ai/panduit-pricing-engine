@@ -32,6 +32,7 @@
     'ΧΡΩΜΑΤΑ': 'ΜΠΛΕ;ΠΡΑΣ;ΚΟΚΚ;ΚΙΤΡ;ΜΑΥΡ;ΠΟΡΤΟΚ;ΒΙΟΛ;ΡΟΖ',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'ΑΚΡΟΔΕΚΤ;ΚΩΣ',
     'ΛΕΞΕΙΣ_RACK': 'RACK;FIBER RUNNER;PDU;CABINET;ΙΚΡΙΩΜΑ',
+    'ΚΑΤΗΓΟΡΙΕΣ_RACK': 'FR;RK;CA',
     'ΟΡΙΟ_ΠΑΝΩ': '5',
     'ΟΡΙΟ_ΚΑΤΩ': '0,2',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': '1,25',
@@ -43,6 +44,7 @@
     'ΧΡΩΜΑΤΑ': 'Ρίζες χρωμάτων για τον κανόνα 3. ΛΕΥΚΟ, ΓΚΡΙ, ΜΩΒ ΔΕΝ είναι χρώματα',
     'ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ': 'Λέξεις περιγραφής για ακροδέκτες (κανόνας 2, πάντα MSRP, πάντα ανά τεμάχιο)',
     'ΛΕΞΕΙΣ_RACK': 'Λέξεις περιγραφής για rack/PDU/fiber runner (κανόνας 2β, πάντα MSRP — ειδικές τιμές έργων δεν γίνονται γενική τιμή)',
+    'ΚΑΤΗΓΟΡΙΕΣ_RACK': 'Pricing Category του καταλόγου (1, 2 ή 3) που πάνε πάντα MSRP με τον κανόνα 2β. FR = fiber runner και σχάρες, RK = rack και παρελκόμενα, CA = cabinets',
     'ΟΡΙΟ_ΠΑΝΩ': 'Δ1: καθαρό νέο ÷ παλιό ≥ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΟΡΙΟ_ΚΑΤΩ': 'Δ1: καθαρό νέο ÷ παλιό ≤ αυτό → δεν γράφεται, ΓΙΑ_ΕΛΕΓΧΟ',
     'ΚΟΣΤΟΣ_ΠΑΝΩ': 'Δ5: SPA → MSRP με καθαρό ↑ ≥ αυτό → λίστα SPA→MSRP_ΚΟΣΤΟΣ',
@@ -316,6 +318,7 @@
     const colours = splitList(S['ΧΡΩΜΑΤΑ']).map(gr);
     const termWords = splitList(S['ΛΕΞΕΙΣ_ΑΚΡΟΔΕΚΤΗ']).map(gr);
     const rackWords = splitList(S['ΛΕΞΕΙΣ_RACK']).map(gr);
+    const rackCats = splitList(S['ΚΑΤΗΓΟΡΙΕΣ_RACK']).map(key);
     const spa = spaTable(spaRows, S);
     const SPA = spa.map;
 
@@ -341,7 +344,7 @@
       const spaPrice = sp ? (jackPair.get(r.pn) ?? sp.price) : null;
       const isCable = /^ΚΑΛ[ .]/.test(d) && gr(r.base) === 'Μ';
       const isTerm = termWords.some(w => d.includes(w));
-      const isRack = rackWords.some(w => d.includes(w));
+      const isRack = rackWords.some(w => d.includes(w)) || !!(cat && cat.pc.some(c => c && rackCats.includes(key(c))));
       const isCord = CORD_RE.test(d);
       const colour = colours.find(c => new RegExp('(^|[^Α-ΩA-Z0-9])' + c).test(d));
       const L = isCord ? cordLength(r.desc) : null;
