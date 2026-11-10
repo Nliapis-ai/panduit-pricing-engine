@@ -2,6 +2,6 @@
   "name": "panduit-pricing-html",
   "private": true,
   "description": "Builds the single-file Panduit pricing HTML",
-  "scripts": { "build": "node build.js", "test": "node test.js" },
+  "scripts": { "build": "node build.js", "test": "node test_gates.js" },
   "dependencies": { "jszip": "^3.10.1", "xlsx": "^0.18.5" }
 }

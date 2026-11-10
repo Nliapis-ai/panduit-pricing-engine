@@ -232,7 +232,8 @@ function render(res, tests, integ, sap){
     [d4 ? 'bad' : 'ok', `Δ4 SPA/NMM με Z.A1 ≠ 0: ${d4}`],
   ];
   if (rev.length) items.push(['warn', `${rev.length} γραμμές ΓΙΑ_ΕΛΕΓΧΟ · ${kept} κράτησαν την παλιά τιμή · απάντησε στο ΠΑΡΑΜΕΤΡΟΙ και ξανατρέξε`]);
-  const d5 = c(r => r.flags.includes('Δ5 SPA→MSRP')); if (d5) items.push(['warn', `Δ5: ${d5} γραμμές πήγαν από SPA σε MSRP με ανατίμηση (φύλλο SPA→MSRP_ΚΟΣΤΟΣ)`]);
+  const d5 = c(r => r.flags.includes('Δ5 SPA→MSRP')); if (d5) items.push(['warn', `Δ5: ${d5} γραμμές πήγαν από SPA σε MSRP με ανατίμηση (φύλλο SPA→MSRP_ΚΟΣΤΟΣ, ελέγξτε με το SPA δίπλα)`]);
+  if (res.spaNotInSap.length) items.push(['warn', `Δ8: ${res.spaNotInSap.length} κωδικοί έχουν SPA αλλά δεν υπάρχουν στο SAP export (φύλλο SPA_ΧΩΡΙΣ_SAP)`]);
   sap.shift.forEach(s => items.push(['warn', 'Headers SAP μετατοπισμένα, διαβάστηκε από τα δεδομένα: ' + s]));
   Pcur.warnings.forEach(w => items.push(['warn', 'Παράμετροι: ' + w]));
   $('#checks').innerHTML = items.map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('');

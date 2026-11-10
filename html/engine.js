@@ -467,11 +467,19 @@
         if (o.review && o.review.check === 'ΤΕΜΑΧΙΟ Ή ΚΟΥΤΙ') { /* written, but listed */ }
         o.newPrice = price; o.newZ = z;
       }
-      if (!o.gateBlocked && r.oldZ === 0 && src === 'MSRP' && o.ratio != null && o.ratio >= UP) o.flags.push('Δ5 SPA→MSRP');
+      // Δ5: γράφεται MSRP, αλλά μπαίνει στη λίστα ελέγχου όταν το καθαρό ανέβηκε ≥ UP και
+      // (α) η παλιά ήταν καθαρή (Z.A1 = 0, δηλαδή SPA) ή (β) υπάρχει SPA που αγνοήθηκε (rack/PDU/ακροδέκτης/cord).
+      if (src === 'MSRP' && sp) o.spaIgnored = { price: round(spaPrice), cust: sp.cust };
+      if (!o.gateBlocked && src === 'MSRP' && o.ratio != null && o.ratio >= UP && (r.oldZ === 0 || sp)) o.flags.push('Δ5 SPA→MSRP');
       if (isCable && r.P !== 100) o.flags.push(`ΚΑΛΩΔΙΟ P = ${r.P}`);
       res.push(o);
     }
-    return { rows: res, spaExcluded: spa.excluded, spaParts: SPA.size };
+    // Δ8: κωδικοί με SPA που δεν υπάρχουν στο SAP export (δεν μπορεί να βγει τιμή: χρειάζεται δημιουργία υλικού)
+    const sapPns = new Set(sap.rows.map(r => r.pn));
+    const spaNotInSap = [...SPA].filter(([pn]) => !sapPns.has(pn))
+      .map(([pn, s]) => ({ pn, price: round(s.price), cust: s.cust, n: s.n, kind: s.kind }))
+      .sort((a, b) => a.pn < b.pn ? -1 : 1);
+    return { rows: res, spaExcluded: spa.excluded, spaParts: SPA.size, spaNotInSap };
   }
 
   // ---------- self tests (arithmetic + rounding) ----------
@@ -567,7 +575,7 @@
     const review = R.filter(r => r.review);
     const cnt = (f) => R.filter(f).length;
     const S = [
-      ['ΕΝΗΜΕΡΩΣΗ ΤΙΜΩΝ PANDUIT · RULES V3.1', ''],
+      ['ΕΝΗΜΕΡΩΣΗ ΤΙΜΩΝ PANDUIT · RULES V3.3', ''],
       ['Ημερομηνία', meta.date], ['Αρχείο SAP', meta.sap], ['SPA', meta.spa], ['Κατάλογος', meta.cat], ['Παράμετροι', meta.params], ['', ''],
       ['Γραμμές SAP', R.length], ['Άλλαξαν (τιμή ή Z.A1)', changed.length], ['ΓΙΑ_ΕΛΕΓΧΟ', review.length],
       ['   από αυτές με ΠΑΛΙΑ τιμή (δεν γράφτηκε νέα)', review.filter(r => r.newPrice === r.oldPrice && r.newZ === r.oldZ).length], ['', ''],
@@ -576,6 +584,7 @@
       ['Δ3 MSRP με Z.A1 = 0 (πρέπει 0)', cnt(r => r.source === 'MSRP' && r.newZ === 0 && !r.review)],
       ['Δ4 SPA/NMM με Z.A1 ≠ 0 (πρέπει 0)', cnt(r => (r.source === 'SPA' || r.source === 'NMM') && r.newZ !== 0 && !r.review)],
       ['Δ5 SPA → MSRP με ανατίμηση', cnt(r => r.flags.includes('Δ5 SPA→MSRP'))],
+      ['Δ8 κωδικοί SPA που δεν υπάρχουν στο SAP (φύλλο SPA_ΧΩΡΙΣ_SAP)', result.spaNotInSap.length],
       ['SPA γραμμές που αγνοήθηκαν (αποκλεισμός)', result.spaExcluded], ['', ''],
       ['Τεστ αριθμητικής (7 κωδικοί αναφοράς)', meta.tests.every(t => t.ok) ? 'ΠΕΡΝΑ' : 'ΑΠΟΤΥΓΧΑΝΕΙ'],
       ['Έλεγχος αρχείου: άλλαξαν μόνο «Αρχική τιμή» και «Z.A1»', meta.integrity],
@@ -596,8 +605,10 @@
     add('ΜΕ_SPA', ['Part Number', 'Υλικό (SAP)', 'Περιγραφή', 'Πηγή', 'SPA customer', 'Κανόνας επιλογής', 'Τιμή SPA', 'Νέα τιμή', 'Z.A1'],
       R.filter(r => r.source === 'SPA' || r.source === 'NMM').map(r => [r.pn, r.mat, r.desc, r.source === 'NMM' ? 'NETKEY MID MARKET' : 'SPA', r.spa ? r.spa.cust : '', r.spa ? (r.spa.rule || 'NMM') : '', r.base, r.newPrice, r.newZ]),
       [16, 11, 38, 18, 36, 22, 10, 10, 6]);
-    add('SPA→MSRP_ΚΟΣΤΟΣ', ['Part Number', 'Περιγραφή', 'Παλιά (καθαρή)', 'Νέα MSRP', 'Z.A1', 'Καθαρό νέο ÷ παλιό', 'Πηγή & αναγωγή'],
-      R.filter(r => r.flags.includes('Δ5 SPA→MSRP')).map(r => [r.pn, r.desc, r.oldPrice, r.newPrice, r.newZ, Number(r.ratio.toFixed(3)), r.how]), [16, 38, 12, 10, 6, 12, 70]);
+    add('SPA→MSRP_ΚΟΣΤΟΣ', ['Part Number', 'Περιγραφή', 'Παλιά τιμή', 'Παλιό Z.A1', 'Νέα MSRP', 'Νέο Z.A1', 'Καθαρό νέο ÷ παλιό', 'SPA που αγνοήθηκε', 'SPA πελάτης', 'Πηγή & αναγωγή'],
+      R.filter(r => r.flags.includes('Δ5 SPA→MSRP')).map(r => [r.pn, r.desc, r.oldPrice, r.oldZ, r.newPrice, r.newZ, Number(r.ratio.toFixed(3)), r.spaIgnored ? r.spaIgnored.price : '', r.spaIgnored ? r.spaIgnored.cust : '', r.how]), [16, 38, 10, 8, 10, 8, 12, 12, 24, 70]);
+    add('SPA_ΧΩΡΙΣ_SAP', ['Part Number', 'SPA τιμή (νετ)', 'SPA customer', 'Πλήθος SPA', 'Είδος', 'Τι σημαίνει'],
+      result.spaNotInSap.map(x => [x.pn, x.price, x.cust, x.n, x.kind, 'Δεν υπάρχει στο SAP export: δεν βγαίνει τιμή. Χρειάζεται δημιουργία υλικού στο SAP.']), [18, 12, 30, 10, 8, 70]);
     add('EXPIRED', ['Part Number', 'Υλικό (SAP)', 'Περιγραφή', 'Status καταλόγου'], R.filter(r => r.expired).map(r => [r.pn, r.mat, r.desc, r.expired]), [16, 11, 40, 14]);
     add('EOL', ['Part Number', 'Υλικό (SAP)', 'Περιγραφή', 'Τιμή (παλιά)', 'Z.A1', 'Λόγος'], R.filter(r => r.source === 'EOL').map(r => [r.pn, r.mat, r.desc, r.oldPrice, r.oldZ, r.how]), [16, 11, 40, 10, 6, 50]);
     const dups = R.filter(r => r.flags.includes('ΔΙΠΛΟΕΓΓΡΑΦΗ'));
