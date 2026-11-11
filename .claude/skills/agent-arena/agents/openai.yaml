@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Arena"
+  short_description: "Heterogeneous discussion and optional companion review."
+  default_prompt: "Use $agent-arena for independent heterogeneous analysis and cross-review, preserve user intent and evidence, or enable persistent concurrent companion checks with a confirmed model and reasoning effort."
